@@ -67,6 +67,7 @@ class ImagenetDataModule(pl.LightningDataModule):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.num_classes = 1000
         self.transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Resize(256),
@@ -105,36 +106,44 @@ class ImagenetDataModule(pl.LightningDataModule):
     
 # Cifar10
 from torchvision.datasets import CIFAR10, CIFAR100
+from torchvision.transforms import AutoAugmentPolicy
 
 class CIFAR10DataModule(pl.LightningDataModule):
     def __init__(self, data_dir="./data/", batch_size=128):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
-        self.transform = transforms.Compose([
+        self.num_classes = 10
+        self.autoaugment_transform = transforms.Compose([
+            transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
+        self.test_transform = transforms.Compose([
             transforms.ToTensor(),
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
     
     def prepare_data(self):
         # Download the CIFAR-10 dataset
-        CIFAR10(root=self.data_dir, train=True, transform=self.transform, download=True)
-        CIFAR10(root=self.data_dir, train=False, transform=self.transform, download=True)
+        CIFAR10(root=self.data_dir, train=True, transform=self.autoaugment_transform, download=True)
+        CIFAR10(root=self.data_dir, train=False, transform=self.test_transform, download=True)
 
     def setup(self, stage=None):
         # Load the train & val datasets
         if stage == 'fit' or stage is None:
             self.train_dataset, self.val_dataset = torch.utils.data.random_split(
-                CIFAR10(root=self.data_dir, train=True, transform=self.transform, download=False),
-                [45000, 5000]
-            )
+                CIFAR10(root=self.data_dir, train=True,
+                        transform=self.autoaugment_transform, download=False),
+                        [45000, 5000], generator=torch.Generator().manual_seed(42)
+                )
         
         # Load the test dataset
         if stage == 'test' or stage is None:
-            self.test_dataset = CIFAR10(root=self.data_dir, train=False, transform=self.transform, download=False)
+            self.test_dataset = CIFAR10(root=self.data_dir, train=False, transform=self.test_transform, download=False)
             
     def train_dataloader(self):
-        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=2, persistent_workers=True, prefetch_factor=2, pin_memory=True)
+        return DataLoader(self.train_dataset, batch_size=self.batch_size, shuffle=True, num_workers=4, persistent_workers=True, prefetch_factor=2, pin_memory=True)
 
     def val_dataloader(self):
         return DataLoader(self.val_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4, persistent_workers=True, prefetch_factor=2, pin_memory=True)
@@ -142,13 +151,12 @@ class CIFAR10DataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4, persistent_workers=True, prefetch_factor=2, pin_memory=True)
 
-from torchvision.transforms import AutoAugmentPolicy
-
 class CIFAR100DataModule(pl.LightningDataModule):
     def __init__(self, data_dir="./data/", batch_size=128):
         super().__init__()
         self.data_dir = data_dir
         self.batch_size = batch_size
+        self.num_classes = 100
         
         # Transformación estándar para el conjunto de prueba
         self.test_transform = transforms.Compose([
@@ -156,36 +164,36 @@ class CIFAR100DataModule(pl.LightningDataModule):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         
-        # AutoAugment para el conjunto de entrenamiento y validación
-        self.autoaugment_transform = transforms.Compose([
-            transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
-        ])
-        
-        # Transformación para el conjunto de entrenamiento y validación
-        # self.train_val_transform = transforms.Compose([
-        #     transforms.RandomHorizontalFlip(),
-        #     transforms.RandomCrop(32, padding=4),
-        #     transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
-        #     transforms.RandomRotation(10),
-        #     transforms.RandomResizedCrop(32, scale=(0.8, 1.0), ratio=(0.9, 1.1)),
+        # # # AutoAugment para el conjunto de entrenamiento y validación
+        # self.autoaugment_transform = transforms.Compose([
+        #     transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
         #     transforms.ToTensor(),
         #     transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         # ])
+        
+        # Transformación para el conjunto de entrenamiento y validación
+        self.train_val_transform = transforms.Compose([
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomCrop(32, padding=4),
+            transforms.ColorJitter(brightness=0.2, contrast=0.2, saturation=0.2, hue=0.1),
+            transforms.RandomRotation(10),
+            transforms.RandomResizedCrop(32, scale=(0.8, 1.0), ratio=(0.9, 1.1)),
+            transforms.ToTensor(),
+            transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+        ])
     
     
     def prepare_data(self):
         # Download the CIFAR-100 dataset
-        CIFAR100(root=self.data_dir, train=True, transform=self.autoaugment_transform, download=True)
+        CIFAR100(root=self.data_dir, train=True, transform=self.train_val_transform, download=True)
         CIFAR100(root=self.data_dir, train=False, transform=self.test_transform, download=True)
 
     def setup(self, stage=None):
         # Load the train & val datasets
         if stage == 'fit' or stage is None:
             self.train_dataset, self.val_dataset = torch.utils.data.random_split(
-                CIFAR100(root=self.data_dir, train=True, transform=self.autoaugment_transform, download=False),
-                [45000, 5000]
+                CIFAR100(root=self.data_dir, train=True, transform=self.train_val_transform, download=False),
+                [45000, 5000], generator=torch.Generator().manual_seed(42)
             )
         
         # Load the test dataset
