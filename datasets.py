@@ -237,7 +237,7 @@ if __name__ == '__main__':
     import os
     import argparse
     parser = argparse.ArgumentParser(description='Dataset Loader')
-    parser.add_argument('--dataset', type=str,  choices=['CIFAR100', 'CIFAR10', 'ImageNet'], help='Dataset to be loaded')
+    parser.add_argument('--dataset', type=str,  choices=['cifar100', 'cifar10', 'imagenet'], help='Dataset to be loaded')
     args = parser.parse_args()
     
     # Crear carpeta para almacenar los datos
@@ -245,17 +245,17 @@ if __name__ == '__main__':
         os.makedirs("./data/")
 
     dataset_classes = {
-        'CIFAR100': CIFAR100DataModule,
-        'CIFAR10': CIFAR10DataModule,
-        'ImageNet': ImagenetDataModule
+        'cifar100': CIFAR100DataModule,
+        'cifar10': CIFAR10DataModule,
+        'imagenet': ImagenetDataModule
     }
 
     if args.dataset not in dataset_classes:
         raise ValueError(f"Invalid dataset name. Available options: {', '.join(dataset_classes.keys())}")
     else:
-        if not os.path.exists(f"./data/{args.dataset.lower()}/"):
-            os.makedirs(f"./data/{args.dataset.lower()}/")
-        datamodule = dataset_classes[args.dataset](data_dir=f"./data/{args.dataset.lower()}/")
+        if not os.path.exists(f"./data/{args.dataset}/"):
+            os.makedirs(f"./data/{args.dataset}/")
+        datamodule = dataset_classes[args.dataset](data_dir=f"./data/{args.dataset}/")
         datamodule.prepare_data()
         datamodule.setup()
         train_loader = datamodule.train_dataloader()

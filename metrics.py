@@ -10,8 +10,8 @@ from trainer import TrainerModule
 if __name__ == '__main__':
     import argparse
     parser = argparse.ArgumentParser(description='Trainer arguments')
-    parser.add_argument('--dataset', type=str, choices=['CIFAR100', 'CIFAR10', 'ImageNet'], default='CIFAR100', help='Dataset to use')
-    parser.add_argument('--architecture', type=str, choices=['ResNet18', 'ResNet34', 'ResNet50', 'ResNet101', 'ResNet152'], default='ResNet101', help='Architecture to use')
+    parser.add_argument('--dataset', type=str, choices=['cifar100', 'cifar10', 'imagenet'], default='cifar100', help='Dataset to use')
+    parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet101', help='Architecture to use')
     parser.add_argument('--select_version', type=int, default=None, help='Version number to continue training from')
     parser.add_argument('--show_versions', action='store_true', help='Show available versions for continuing training')
 
@@ -22,7 +22,7 @@ if __name__ == '__main__':
     select_version = args.select_version
     show_versions = args.show_versions
     log_dir = "lightning_logs"
-    name = f"{architecture.lower()}_{dataset.lower()}"
+    name = f"{architecture.lower()}_{dataset}"
     exp_dir = os.path.join(log_dir, name)
     ckpt = None
     
@@ -47,13 +47,13 @@ if __name__ == '__main__':
     from datasets import CIFAR100DataModule, CIFAR10DataModule, ImagenetDataModule
 
     dataset_classes = {
-        'CIFAR100': CIFAR100DataModule,
-        'CIFAR10': CIFAR10DataModule,
-        'ImageNet': ImagenetDataModule
+        'cifar100': CIFAR100DataModule,
+        'cifar10': CIFAR10DataModule,
+        'imagenet': ImagenetDataModule
     }
 
     try:
-        dm = dataset_classes[dataset](data_dir=f"./data/{dataset.lower()}/")
+        dm = dataset_classes[dataset](data_dir=f"./data/{dataset}/")
     except KeyError:
         raise ValueError(f"Invalid dataset: {dataset}")
 
@@ -62,11 +62,11 @@ if __name__ == '__main__':
 
     from ResNet import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
     architectures = {
-        'ResNet18': ResNet18,
-        'ResNet34': ResNet34,
-        'ResNet50': ResNet50,
-        'ResNet101': ResNet101,
-        'ResNet152': ResNet152
+        'resnet18': ResNet18,
+        'resnet34': ResNet34,
+        'resnet50': ResNet50,
+        'resnet101': ResNet101,
+        'resnet152': ResNet152
     }
 
     try:
