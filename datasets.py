@@ -240,6 +240,10 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Dataset Loader')
     parser.add_argument('--dataset', type=str, help='Dataset name (cifar100, cifar10, imagenet)')
     args = parser.parse_args()
+    
+    # Crear carpeta para almacenar los datos
+    if not os.path.exists("./data/"):
+        os.makedirs("./data/")
 
     dataset_classes = {
         'cifar100': CIFAR100DataModule,
