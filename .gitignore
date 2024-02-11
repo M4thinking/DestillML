@@ -172,3 +172,6 @@ lightning_logs/
 
 # Text files
 *.txt
+
+# Transfer files from server
+*.sh
