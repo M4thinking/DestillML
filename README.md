@@ -54,4 +54,55 @@ Se comparan los resultados de los modelos entrenados utilizando las métricas de
 - [Russakovsky, O., Deng, J., Su, H., Krause, J., Satheesh, S., Ma, S., ... & Berg, A. C. (2015). ImageNet large scale visual recognition challenge. International Journal of Computer Vision, 115(3), 211-252.](http://www.image-net.org/challenges/LSVRC/)
 - [He, K., Zhang, X., Ren, S., & Sun, J. (2016). Deep residual learning for image recognition. In Proceedings of the IEEE conference on computer vision and pattern recognition (pp. 770-778).](https://arxiv.org/abs/1512.03385)
 - [Simonyan, K., & Zisserman, A. (2014). Very deep convolutional networks for large-scale image recognition. arXiv preprint arXiv:1409.1556.](https://arxiv.org/abs/1409.1556)
-  
+
+#### Reproducibilidad
+
+1. Clonar el repositorio
+
+    ```bash
+    git clone https://github.com/M4thinking/DestillML.git && cd DestillML
+    ```
+
+2. Crear ambiente virtual, activar, updatear pip e instalar dependencias:
+
+    ```bash
+    python -m venv env
+    source ./env/bin/activate
+    python -m pip install --upgrade pip
+    pip install -r requirements.txt
+    ```
+
+3. Ejecutar dataset a utilizar (cifar10, cifar100, imagenet):
+
+    ```bash
+    python dataset.py --dataset cifar100
+    ```
+
+4. Entrenar red tutora:
+
+    ```bash
+    python trainer.py --dataset cifar100 --architecture ResNet101 --epochs 600 --batch-size 128
+    ```
+
+    Además, puedes utilizar ```--show_versions``` para ver si existen más modelos entrenados bajo la misma configuración de dataset y arquitectura. Con ```--continue_training {version}``` puedes continuar el entrenamiento de un modelo existente entregando su respectiva versión.
+
+    Por último para ver las principales métricas de entrenamiento y validación, además de guardar el onnx del modelo, puedes utilizar
+
+    ```bash
+    python metrics.py --dataset cifar100 --architecture ResNet101 --select_version 0
+    ```
+
+5. Entrenar la red aprendiz de dos formas:
+   1. Entrenar red aprendiz como modelo base igual a la red tutora:
+
+        ```bash
+        python trainer.py --dataset cifar100 --architecture ResNet18 --epochs 600 --batch-size 128
+        ```
+
+   2. Entrenar red aprendiz con destilación de conocimiento, para esto, primero debe guardar el modelo onnx de la red tutora en la carpeta de pretrained_models (puede usar metrics.py y mover el archivo onnx desde el checkpoint del experimento a la carpeta pretrained_models). Luego, puede entrenar la red aprendiz de la siguiente manera:
+
+        ```bash
+        python destiller.py --dataset cifar100 --student_architecture ResNet18 --epochs 600 --batch-size 128 --distillation soft_targets --teacher_architecture ResNet101
+        ```
+
+        Igual que antes, puedes utilizar ```--show_versions``` para ver si existen más modelos entrenados bajo la misma configuración de dataset y arquitectura. Con ```--continue_training {version}``` puedes continuar el entrenamiento de un modelo existente entregando su respectiva versión.
