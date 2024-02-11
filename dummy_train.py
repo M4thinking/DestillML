@@ -45,8 +45,11 @@ def main(args):
     # Crear el modelo y el trainer
     model = DummyModel()
     dummy_logs = "dummy_logs"
-    trainer = pl.Trainer(max_epochs=10, default_root_dir=dummy_logs, device=[args.device] if torch.cuda.is_available() else "cpu")
+    trainer = pl.Trainer(max_epochs=10, default_root_dir=dummy_logs, devices=[args.device] if torch.cuda.is_available() else "cpu")
     trainer.fit(model, dataloader)
+    # Borrar carpeta de logs
+    import shutil
+    shutil.rmtree(dummy_logs)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
