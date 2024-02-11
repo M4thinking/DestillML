@@ -84,7 +84,7 @@ if __name__ == '__main__':
     accuracy = Accuracy(task='multiclass', num_classes=dm.num_classes)
     net = model.model
     # Guardar en checkpoints como un onnx
-    torch.onnx.export(net, torch.randn(1, 3, 32, 32).to('cuda'), os.path.join(ckpt, "model.onnx"))
+    torch.onnx.export(net, torch.randn(1, 3, 32, 32).to('cuda'), os.path.join(ckpt, f"{name}.onnx"), verbose=True)
     net.to('cuda')
      
     net.eval()
