@@ -169,3 +169,6 @@ test_*.py
 
 # Pytorch Lightning
 lightning_logs/
+
+# Text files
+*.txt
