@@ -1,7 +1,7 @@
 import torch
 from torch.utils.data import DataLoader, Dataset
 import pytorch_lightning as pl
-
+import argparse
 class DummyDataset(Dataset):
     def __init__(self, num_samples):
         self.num_samples = num_samples
@@ -37,12 +37,19 @@ class DummyModel(pl.LightningModule):
         self.log('test_loss', loss)
         return loss
 
-# Crear el dataset y el dataloader
-dataset = DummyDataset(num_samples=100)
-dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
+def main(args):
+    # Crear el dataset y el dataloader
+    dataset = DummyDataset(num_samples=100)
+    dataloader = DataLoader(dataset, batch_size=32, shuffle=True)
 
-# Crear el modelo y el trainer
-model = DummyModel()
-dummy_logs = "dummy_logs"
-trainer = pl.Trainer(max_epochs=10, default_root_dir=dummy_logs)
-trainer.fit(model, dataloader)
+    # Crear el modelo y el trainer
+    model = DummyModel()
+    dummy_logs = "dummy_logs"
+    trainer = pl.Trainer(max_epochs=10, default_root_dir=dummy_logs, device=[args.device] if torch.cuda.is_available() else "cpu")
+    trainer.fit(model, dataloader)
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--device", type=int, default=0, help="Device index to use for training")
+    args = parser.parse_args()
+    main(args)
