@@ -13,7 +13,9 @@ class TrainerModule(pl.LightningModule):
         super().__init__()
         self.model = model
         self.learning_rate = learning_rate
-        self.accuracy = Accuracy(task="multiclass", num_classes=self.model.num_classes)
+        self.train_accuracy = Accuracy(task="multiclass", num_classes=self.model.num_classes)
+        self.val_accuracy = Accuracy(task="multiclass", num_classes=self.model.num_classes)
+        self.test_accuracy = Accuracy(task="multiclass", num_classes=self.model.num_classes)
         self.loss = nn.CrossEntropyLoss(label_smoothing=0.1)
         self.lr = learning_rate
         self.momentum = momentum
@@ -51,34 +53,31 @@ class TrainerModule(pl.LightningModule):
         logits = self.model(x)
         loss = self.loss(logits, y)
         self.log('train_loss', loss, on_epoch=True, on_step=True, prog_bar=True)
+        self.train_accuracy(logits, y)
         return loss
 
     def on_training_epoch_end(self, outputs = None):
-        self.log('train_accuracy', self.accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('train_accuracy', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
         logits = self.model(x)
         loss = self.loss(logits, y)
         self.log('val_loss', loss, on_epoch=True, on_step=True, prog_bar=True)
-        self.accuracy(logits, y)
+        self.val_accuracy(logits, y)
 
     def on_validation_epoch_end(self, outputs = None):
-        self.log('val_accuracy', self.accuracy.compute(), prog_bar=True, on_epoch=True)
-        
-        # Agregar un grafico para todos los gradientes en conjunto por época
-        gradients = [param.grad for param in self.model.parameters()]
-        self.logger.experiment.add_histogram('gradients', gradients, self.current_epoch)
+        self.log('val_accuracy', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self.model(x)
         loss = self.loss(logits, y)
         self.log('test_loss', loss)
-        self.accuracy(logits, y)
+        self.test_accuracy(logits, y)
 
     def on_test_epoch_end(self, outputs = None):
-        self.log('test_accuracy', self.accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('test_accuracy', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
     
     # Agregar learning rate a los logs
     def on_train_epoch_start(self):
@@ -166,9 +165,9 @@ if __name__ == '__main__':
 
     # Configurar el ModelCheckpoint para guardar el mejor modelo
     checkpoint_callback = ModelCheckpoint(
-        filename='{epoch:02d}-{val_loss:.2f}',  # Nombre del archivo
-        monitor='val_loss',
-        mode='min',
+        filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
+        monitor='val_accuracy',
+        mode='max',
         save_top_k=1,
     )
 
@@ -176,7 +175,7 @@ if __name__ == '__main__':
     early_stopping_callback = EarlyStopping(
         monitor='val_accuracy',
         patience=150,
-        mode='min'
+        mode='max'
     )
     
     if show_versions:
