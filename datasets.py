@@ -209,7 +209,6 @@ class CIFAR100DataModule(pl.LightningDataModule):
     def test_dataloader(self):
         return DataLoader(self.test_dataset, batch_size=self.batch_size, shuffle=False, num_workers=4, persistent_workers=True, prefetch_factor=2, pin_memory=True)
 
-# 
 import matplotlib.pyplot as plt
 
 def plot_images(train_loader, test_loader):
@@ -238,7 +237,7 @@ if __name__ == '__main__':
     import os
     import argparse
     parser = argparse.ArgumentParser(description='Dataset Loader')
-    parser.add_argument('--dataset', type=str, help='Dataset name (cifar100, cifar10, imagenet)')
+    parser.add_argument('--dataset', type=str,  choices=['CIFAR100', 'CIFAR10', 'ImageNet'], help='Dataset to be loaded')
     args = parser.parse_args()
     
     # Crear carpeta para almacenar los datos
@@ -246,9 +245,9 @@ if __name__ == '__main__':
         os.makedirs("./data/")
 
     dataset_classes = {
-        'cifar100': CIFAR100DataModule,
-        'cifar10': CIFAR10DataModule,
-        'imagenet': ImagenetDataModule
+        'CIFAR100': CIFAR100DataModule,
+        'CIFAR10': CIFAR10DataModule,
+        'ImageNet': ImagenetDataModule
     }
 
     if args.dataset not in dataset_classes:
