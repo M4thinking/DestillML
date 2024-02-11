@@ -162,6 +162,7 @@ cython_debug/
 # Project Files
 data/*
 test_*.py
+*_loggs/
 
 # VSCode
 .vscode/
