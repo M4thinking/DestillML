@@ -3,7 +3,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 from torchmetrics import Accuracy
-from trainer_teacher import TrainerModule
+from trainer import TrainerModule
 
 
 
