@@ -93,6 +93,7 @@ if __name__ == '__main__':
     parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
     parser.add_argument('--continue_training', type=int, default=None, help='Version number to continue training from')
     parser.add_argument('--show_versions', action='store_true', help='Show available versions for continuing training')
+    parser.add_argument('--device', type=int, default=0, help='Device to use for training')
 
     args = parser.parse_args()
 
@@ -102,7 +103,8 @@ if __name__ == '__main__':
     max_epochs = args.epochs
     continue_training = args.continue_training
     show_versions = args.show_versions
-    log_dir = "lightning_logs"
+    device = args.device
+    log_dir = "vanilla_training_logs"
     name = f"{architecture}_{dataset}"
     exp_dir = os.path.join(log_dir, name)
     ckpt = None
@@ -191,6 +193,8 @@ if __name__ == '__main__':
         callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
         deterministic=True,  # Hacer que el entrenamiento sea determinista
         max_epochs=max_epochs,  # Número máximo de épocas
+        accelerator="gpu",
+        devices=[device],  # Dispositivo a usar
     )
 
     trainer.fit(model, dm, ckpt_path=ckpt)
