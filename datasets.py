@@ -235,24 +235,32 @@ def plot_images(train_loader, test_loader):
 
 
 if __name__ == '__main__':
-    datamodule = CIFAR10DataModule(data_dir="./data/cifar10/")
-    datamodule.prepare_data()
-    datamodule.setup()
-    train_loader = datamodule.train_dataloader()
-    val_loader = datamodule.val_dataloader()
-    test_loader = datamodule.test_dataloader()
-    print(len(train_loader), len(val_loader), len(test_loader))
-    
-    # Cifar100
-    datamodule = CIFAR100DataModule(data_dir="./data/cifar100/")
-    datamodule.prepare_data()
-    datamodule.setup()
-    train_loader = datamodule.train_dataloader()
-    val_loader = datamodule.val_dataloader()
-    test_loader = datamodule.test_dataloader()
-    print(len(train_loader), len(val_loader), len(test_loader))
-    
-    plot_images(train_loader, test_loader)
+    import os
+    import argparse
+    parser = argparse.ArgumentParser(description='Dataset Loader')
+    parser.add_argument('--dataset', type=str, help='Dataset name (cifar100, cifar10, imagenet)')
+    args = parser.parse_args()
+
+    dataset_classes = {
+        'cifar100': CIFAR100DataModule,
+        'cifar10': CIFAR10DataModule,
+        'imagenet': ImagenetDataModule
+    }
+
+    if args.dataset not in dataset_classes:
+        raise ValueError(f"Invalid dataset name. Available options: {', '.join(dataset_classes.keys())}")
+    else:
+        if not os.path.exists(f"./data/{args.dataset.lower()}/"):
+            os.makedirs(f"./data/{args.dataset.lower()}/")
+        datamodule = dataset_classes[args.dataset](data_dir=f"./data/{args.dataset.lower()}/")
+        datamodule.prepare_data()
+        datamodule.setup()
+        train_loader = datamodule.train_dataloader()
+        val_loader = datamodule.val_dataloader()
+        test_loader = datamodule.test_dataloader()
+        print(len(train_loader), len(val_loader), len(test_loader))
+
+        # plot_images(train_loader, test_loader)
     
     
     
