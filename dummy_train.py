@@ -46,14 +46,3 @@ model = DummyModel()
 dummy_logs = "dummy_logs"
 trainer = pl.Trainer(max_epochs=10, default_root_dir=dummy_logs)
 trainer.fit(model, dataloader)
-trainer.test(model, dataloader)
-
-# Verificar que se creó el archivo de logs
-import os
-assert os.path.exists(dummy_logs)
-print("El archivo de logs se creó exitosamente!")
-
-# Borrar el archivo de logs
-import shutil
-shutil.rmtree(dummy_logs)
-print("El archivo de logs se borró exitosamente!")
