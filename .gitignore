@@ -173,5 +173,8 @@ test_*.py
 # Text files
 *.txt
 
+# Jupyter Notebook
+*.ipynb
+
 # Transfer files from server
 *.sh
