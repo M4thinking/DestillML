@@ -6,6 +6,8 @@ from utils import get_arguments
 
 if __name__ == '__main__':
     log_dir = "trainer_logs"
+    if not os.path.exists(log_dir):
+        raise ValueError(f"No log directory found: {log_dir}")
     
     args, name, exp_dir, ckpt, version, dm, net = get_arguments(log_dir, "metrics")
     
