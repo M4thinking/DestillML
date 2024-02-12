@@ -40,6 +40,7 @@ def get_arguments_distiller():
     parser = get_common_arguments(description='Distiller arguments')
     parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
     parser.add_argument('--teacher_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet101', help='Teacher architecture to use')
+    parser.add_argument('--teacher_version', type=int, default=None, help='Teacher version to load from')
     parser.add_argument('--student_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet18', help='Student architecture to use')
     parser.add_argument('--distillation_temperature', type=float, default=3.0, help='Distillation temperature')
     parser.add_argument('--alpha', type=float, default=0.5, help='Distillation loss weight')
