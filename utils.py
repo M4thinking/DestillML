@@ -1,6 +1,16 @@
 import os
 import argparse
 
+class DotDict(dict):
+    def __getattr__(self, item):
+        if item in self:
+            return self[item]
+        else:
+            raise AttributeError(f"'{type(self).__name__}' object has no attribute '{item}'")
+
+    __setattr__ = dict.__setitem__
+    __delattr__ = dict.__delitem__
+
 def get_common_arguments(description='Common arguments'):
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('--dataset', type=str, choices=['cifar100', 'cifar10', 'imagenet'], default='cifar100', help='Dataset to use')
@@ -15,7 +25,7 @@ def get_arguments_trainer():
     parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet101', help='Architecture to use')
     parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
     args = parser.parse_args()
-    return {key: value for key, value in args.__dict__.items()}
+    return DotDict(args.__dict__)
 
 def get_arguments_metrics():
     parser = get_common_arguments(description='Metrics arguments')
@@ -24,31 +34,34 @@ def get_arguments_metrics():
     if '--show_versions' not in parser._option_string_actions:
         parser._option_string_actions['--version'].required = True
     args = parser.parse_args()
-    return {key: value for key, value in args.__dict__.items()}
+    return DotDict(args.__dict__)
 
 def get_arguments_distiller():
     parser = get_common_arguments(description='Distiller arguments')
+    parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
     parser.add_argument('--teacher_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet101', help='Teacher architecture to use')
-    parser.add_argument('--teacher_version', type=int, default=None, help='Teacher version to use')
     parser.add_argument('--student_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet18', help='Student architecture to use')
-    parser.add_argument('--student_version', type=int, default=None, help='Student version to use')
     parser.add_argument('--distillation_temperature', type=float, default=3.0, help='Distillation temperature')
     parser.add_argument('--alpha', type=float, default=0.5, help='Distillation loss weight')
-    return parser.parse_args()
+    args = parser.parse_args()
+    return DotDict(args.__dict__)
 
 def get_arguments(log_dir, type):
     import sys
     
     args = getattr(sys.modules[__name__], f"get_arguments_{type}")()
-    versions = get_versions(log_dir, args['architecture'], args['dataset']) # [0, 1, 2, ...], [] si no hay versiones
     
+    architecture = args['architecture'] if type != 'distiller' else [args['teacher_architecture'], args['student_architecture']]
+    
+    versions = get_versions(log_dir, architecture, args['dataset']) # [0, 1, 2, ...], [] si no hay versiones
+        
     # Mostrar las versiones disponibles
     if args['show_versions']:
         print(f"Versions: {versions}")
         exit(0)
         
     # Obtener el directorio del experimento y el checkpoint
-    name, exp_dir, ckpt = get_experiment(log_dir, args['architecture'], args['dataset'], args['version'])
+    name, exp_dir, ckpt = get_experiment(log_dir, architecture, args['dataset'], args['version'])
     
     # Cargar el datamodule
     dm = get_data_module(args['dataset'], args['batch_size'])
@@ -101,26 +114,8 @@ def get_architecture(architecture, num_classes):
         raise ValueError(f"Invalid architecture: {architecture}")
     
 def get_experiment(log_dir, architecture, dataset, version=None):
-    """
-    Get the experiment directory and checkpoint path for a given architecture and dataset.
-
-    Parameters:
-    log_dir (str): The base directory where the experiment logs are stored.
-    architecture (str): The name of the architecture.
-    dataset (str): The name of the dataset.
-    version (int, optional): The version number of the experiment. Defaults to None.
-
-    Returns:
-    tuple: A tuple containing the experiment directory and checkpoint path.
-
-    Raises:
-    ValueError: If the specified version does not exist.
-
-    Additional Behavior:
-    If the version parameter is provided and the corresponding checkpoint path does not exist,
-    a ValueError is raised indicating that the specified version does not exist.
-
-    """
+    if isinstance(architecture, list): # Si es una lista, unir los elementos
+        architecture = "_".join(architecture)
     experiment_name = f"{architecture}_{dataset}"
     experiment_dir = os.path.join(log_dir, experiment_name)
     experiment_version_dir = None
@@ -133,6 +128,8 @@ def get_experiment(log_dir, architecture, dataset, version=None):
     return experiment_name, experiment_dir, experiment_version_dir
 
 def get_versions(log_dir, architecture, dataset):
+    if isinstance(architecture, list): # Si es una lista, unir los elementos
+        architecture = "_".join(architecture)
     experiment_dir = os.path.join(log_dir, f"{architecture}_{dataset}")
     if os.path.exists(experiment_dir):
         return os.listdir(experiment_dir)
