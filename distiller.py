@@ -58,6 +58,11 @@ class KD(pl.LightningModule):
         ValueError("Not implemented, use self.teacher or self.student")
         return x
 
+    # Agregar learning rate a los logs
+    def on_train_epoch_start(self):
+        lr = self.optimizers().param_groups[0]['lr']
+        self.log('learning_rate', lr, on_epoch=True)
+
     def training_step(self, batch, batch_idx):
         return self._shared_step(batch, batch_idx, "train")
     
@@ -163,7 +168,6 @@ if __name__ == "__main__":
     teacher: nn.Module = nets[0]
     student: nn.Module = nets[1]
 
-
     ckpt_path = os.path.join("checkpoints", f"{args.teacher_architecture}_{args.dataset}")
     ckpts = os.listdir(ckpt_path)    
     
@@ -187,7 +191,7 @@ if __name__ == "__main__":
     
     # Obtener el que termina en la versión especificada
     teacher = torch.load(teachr_ckpt)
-    
+
     # Crear el modelo de destilación
     if ckpt is not None:
         model = KD.load_from_checkpoint(ckpt, teacher=teacher, student=student, in_dims=(3, 224, 224))
