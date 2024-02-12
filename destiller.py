@@ -169,28 +169,57 @@ class FeatureMatchingLoss(nn.Module):
             
             
 if __name__ == "__main__":
-    from VGG import vgg19_bn
-    teacher = vgg19_bn(pretrained=False, progress=True, num_classes=1000, init_weights=True, dropout=0.5)
-    teacher.load_state_dict(torch.load("checkpoints/vgg19/vgg19_bn.pth"))
-    student = vgg19_bn(pretrained=False, progress=True, num_classes=1000, init_weights=True, dropout=0.5)
-    model = KD(teacher, student, in_dims=(3, 224, 224), lr=1e-3)
+    from utils import get_arguments
     
-    # Probar funciones paso a paso
-    xs = torch.randn(2, 3, 224, 224)
-    ys = torch.randint(0, 1000, (2,))
-    logits, loss = model.loss(xs, ys)
-    print(logits.shape, loss)
+    # Nombre del experimento
+    log_dir = "distiller_logs"
+
+    args, name, exp_dir, ckpt, version, dm, nets = get_arguments(log_dir, "distiller")
     
-    from datasets import ImagenetDataModule
+    # Cargar el modelo del profesor
+    teacher, student = nets
     
-    dm = ImagenetDataModule(data_dir="./data/imagenet/", batch_size=16)
-    dm.setup()
+    # Crear el modelo de destilación
+    if ckpt is not None:
+        model = KD.load_from_checkpoint(ckpt, teacher=teacher, student=student, in_dims=(3, 224, 224))
+    else:
+        model = KD(teacher, student, in_dims=(3, 224, 224))
     
-    # Entrenar el modelo
-    trainer = pl.Trainer(
-        max_epochs=2,
-        logger=pl.loggers.WandbLogger(name="imagenet-kd", project="imagenet-kd"),
-        log_every_n_steps=50,
+    # importar loggings
+    from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
+    from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+    
+    logger = TensorBoardLogger(log_dir, name=name, version=version)
+    csv_logger = CSVLogger(log_dir, name=name, version=version)
+    
+    # Configurar el ModelCheckpoint para guardar el mejor modelo
+    checkpoint_callback = ModelCheckpoint(
+        filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
+        monitor='val_loss',
+        mode='min',
+        save_top_k=1,
+    )
+
+    # Configurar el EarlyStopping para detener el entrenamiento si la pérdida de validaci 
+    early_stopping_callback = EarlyStopping(
+        monitor='val_loss',
+        patience=150,
+        mode='min'
     )
     
-    trainer.fit(model, dm)
+    trainer = pl.Trainer(
+        logger=[logger, csv_logger],  # Usar el logger de TensorBoard y el logger de CSV
+        log_every_n_steps=1,  # Guardar los logs cada paso
+        callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
+        deterministic=True,  # Hacer que el entrenamiento sea determinista
+        max_epochs=args['epochs'],  # Número máximo de épocas
+        accelerator="gpu",
+        devices=[args['device']],
+    )
+    
+    # Entrenar el modelo
+    trainer = pl.Trainer(max_epochs=5)
+    trainer.fit(model)
+    
+    # Evaluar el modelo
+    trainer.test(model)
