@@ -113,6 +113,18 @@ class ResNet(nn.Module):
         out = out.view(out.size(0), -1)
         out = self.linear(out)
         return out
+    
+    def get_loss(self, criterion, x, y):
+        y_hat = self(x)
+        return criterion(y_hat, y)
+    
+    def features(self, x):
+        out = F.relu(self.bn1(self.conv1(x)))
+        out = self.layer1(out)
+        out = self.layer2(out)
+        out = self.layer3(out)
+        out = self.layer4(out)
+        return out
 
 
 def ResNet18(num_classes=10):
