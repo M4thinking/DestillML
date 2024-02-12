@@ -84,7 +84,7 @@ Se comparan los resultados de los modelos entrenados utilizando las métricas de
     python trainer.py --dataset cifar100 --architecture ResNet101 --epochs 600 --batch-size 128
     ```
 
-    Además, puedes utilizar ```--show_versions``` para ver si existen más modelos entrenados bajo la misma configuración de dataset y arquitectura. Con ```--continue_training {version}``` puedes continuar el entrenamiento de un modelo existente entregando su respectiva versión.
+    Además, puedes utilizar ```--show_versions``` para ver si existen más modelos entrenados bajo la misma configuración de dataset y arquitectura. Con ```--version {version}``` puedes continuar el entrenamiento de un modelo existente entregando su respectiva versión.
 
     Por último para ver las principales métricas de entrenamiento y validación, además de guardar el onnx del modelo, puedes utilizar
 
@@ -105,4 +105,4 @@ Se comparan los resultados de los modelos entrenados utilizando las métricas de
         python destiller.py --dataset cifar100 --student_architecture ResNet18 --epochs 600 --batch-size 128 --distillation soft_targets --teacher_architecture ResNet101
         ```
 
-        Igual que antes, puedes utilizar ```--show_versions``` para ver si existen más modelos entrenados bajo la misma configuración de dataset y arquitectura. Con ```--continue_training {version}``` puedes continuar el entrenamiento de un modelo existente entregando su respectiva versión.
+        Igual que antes, puedes utilizar ```--show_versions``` para ver si existen más modelos entrenados bajo la misma configuración de dataset y arquitectura. Con ```--version {version}``` puedes continuar el entrenamiento de un modelo existente entregando su respectiva versión.
