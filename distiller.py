@@ -49,9 +49,9 @@ class KD(pl.LightningModule):
         self.validation_step_outputs = []
         
         # Losses
-        self.feature_matching_loss = FeatureMatchingLoss(self.student_feature_size, self.teacher_feature_size)
+        # self.feature_matching_loss = FeatureMatchingLoss(self.student_feature_size, self.teacher_feature_size)
         
-        wandb.login() # login to W&B -> get API key from https://wandb.ai/authorize -> copy and paste it here
+        # wandb.login() # login to W&B -> get API key from https://wandb.ai/authorize -> copy and paste it here
         
     def forward(self, x):
         ValueError("Not implemented, use self.teacher or self.student")
@@ -94,26 +94,26 @@ class KD(pl.LightningModule):
         dummy_input = torch.zeros(self.hparams["in_dims"], device=self.device)
         model_filename = "model_final.onnx"
         torch.onnx.export(self, dummy_input, model_filename)
-        wandb.save(model_filename)
+        # wandb.save(model_filename)
         # self.test_step_outputs.clear()
 
-    def on_validation_epoch_end(self):
-        # validation_step_outputs = torch.stack(self.validation_step_outputs)
-        validation_step_outputs = self.validation_step_outputs
-        # Uncomment the following lines to save onnx model to W&B and local
-        # dummy_input = torch.zeros(self.hparams["in_dims"], device=self.device)
-        # model_filename = f"model_{str(self.global_step).zfill(5)}.onnx"
-        # torch.onnx.export(self, dummy_input, model_filename)
-        # wandb.save(model_filename)
+    # def on_validation_epoch_end(self):
+    #     # validation_step_outputs = torch.stack(self.validation_step_outputs)
+    #     validation_step_outputs = self.validation_step_outputs
+    #     # Uncomment the following lines to save onnx model to W&B and local
+    #     # dummy_input = torch.zeros(self.hparams["in_dims"], device=self.device)
+    #     # model_filename = f"model_{str(self.global_step).zfill(5)}.onnx"
+    #     # torch.onnx.export(self, dummy_input, model_filename)
+    #     # wandb.save(model_filename)
 
-        flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
-        self.logger.experiment.log(
-            {"valid/logits": wandb.Histogram(flattened_logits.to("cpu")),
-            "global_step": self.global_step,
-            "current_lr": self.trainer.optimizers[0].param_groups[0]["lr"],
-            })
+    #     flattened_logits = torch.flatten(torch.cat(validation_step_outputs))
+    #     self.logger.experiment.log(
+    #         {"valid/logits": wandb.Histogram(flattened_logits.to("cpu")),
+    #         "global_step": self.global_step,
+    #         "current_lr": self.trainer.optimizers[0].param_groups[0]["lr"],
+    #         })
         
-        self.validation_step_outputs.clear()
+    #     self.validation_step_outputs.clear()
         
     def configure_optimizers(self):
         optimizer = torch.optim.Adam(self.parameters(), lr=self.hparams["lr"])
@@ -142,11 +142,11 @@ class KD(pl.LightningModule):
         temperature = 5  # Puedes ajustar la temperatura según sea necesario
         soft_loss = F.kl_div(F.log_softmax(student_logits / temperature, dim=1), F.softmax(teacher_logits / temperature, dim=1), reduction='batchmean') * temperature**2
 
-        # Feature Matching Loss
-        feature_matching_loss = self.feature_matching_loss(self.teacher.features(xs), self.teacher.features(xs))
+        # # Feature Matching Loss
+        # feature_matching_loss = self.feature_matching_loss(self.teacher.features(xs), self.teacher.features(xs))
 
         # Calcular la pérdida total
-        total_loss = hard_loss + soft_loss + feature_matching_loss
+        total_loss = hard_loss + soft_loss# + feature_matching_loss
 
         return student_logits, total_loss
     
@@ -169,6 +169,7 @@ class FeatureMatchingLoss(nn.Module):
             
             
 if __name__ == "__main__":
+    import os
     from utils import get_arguments
     
     # Nombre del experimento
@@ -178,6 +179,11 @@ if __name__ == "__main__":
     
     # Cargar el modelo del profesor
     teacher, student = nets
+    ckpt_path = os.path.join("checkpoints", name)
+    # Obtener el que termina en la versión especificada
+    teacher_version = args['teacher_version']
+    ckpt_path = os.path.join(ckpt_path, os.listdir(ckpt_path)[teacher_version])
+    teacher = teacher.load_from_checkpoint(ckpt_path, in_dims=(3, 224, 224))
     
     # Crear el modelo de destilación
     if ckpt is not None:
