@@ -85,83 +85,21 @@ class TrainerModule(pl.LightningModule):
         self.log('learning_rate', lr, on_epoch=True)
         
 if __name__ == '__main__':
-    import argparse
-    parser = argparse.ArgumentParser(description='Trainer arguments')
-    parser.add_argument('--dataset', type=str, choices=['cifar100', 'cifar10', 'imagenet'], default='cifar100', help='Dataset to use')
-    parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet101', help='Architecture to use')
-    parser.add_argument('--batch_size', type=int, default=128, help='Batch size')
-    parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
-    parser.add_argument('--continue_training', type=int, default=None, help='Version number to continue training from')
-    parser.add_argument('--show_versions', action='store_true', help='Show available versions for continuing training')
-    parser.add_argument('--device', type=int, default=0, help='Device to use for training')
+    from utils import get_arguments
 
-    args = parser.parse_args()
+    # Directorio de logs
+    log_dir = "trainer_logs"
 
-    dataset = args.dataset
-    architecture = args.architecture
-    batch_size = args.batch_size
-    max_epochs = args.epochs
-    continue_training = args.continue_training
-    show_versions = args.show_versions
-    device = args.device
-    log_dir = "vanilla_training_logs"
-    name = f"{architecture}_{dataset}"
-    exp_dir = os.path.join(log_dir, name)
-    ckpt = None
-    
-    try:
-        if continue_training is not None:
-            ckpt = os.path.join(exp_dir,
-                                f"version_{continue_training}",
-                                "checkpoints")
-            # Verificar si el modelo existe
-            if not os.path.exists(ckpt):
-                raise ValueError(f"Version {continue_training} does not exist")
-    except Exception as e:
-        print(f"An error occurred: {str(e)}")
+    args, name, exp_dir, ckpt, version, dm, net = get_arguments(log_dir, "trainer")
 
-    from datasets import CIFAR100DataModule, CIFAR10DataModule, ImagenetDataModule
-
-    dataset_classes = {
-        'cifar100': CIFAR100DataModule,
-        'cifar10': CIFAR10DataModule,
-        'imagenet': ImagenetDataModule
-    }
-
-    try:
-        dm = dataset_classes[dataset](data_dir=f"./data/{dataset}/", batch_size=batch_size)
-    except KeyError:
-        raise ValueError(f"Invalid dataset: {dataset}")
-
-    dm.prepare_data()
-    dm.setup()
-
-    from ResNet import ResNet18, ResNet34, ResNet50, ResNet101, ResNet152
-    architectures = {
-        'resnet18': ResNet18,
-        'resnet34': ResNet34,
-        'resnet50': ResNet50,
-        'resnet101': ResNet101,
-        'resnet152': ResNet152
-    }
-
-    try:
-        net = architectures[architecture](dm.num_classes)
-    except KeyError:
-        raise ValueError(f"Invalid architecture: {architecture}")
-    
     if ckpt is not None:
-        ckpt = os.path.join(ckpt, os.listdir(ckpt)[0]) # Cargar el primer modelo guardado (last > best)
         model = TrainerModule.load_from_checkpoint(checkpoint_path=ckpt, model=net)
     else:
         model = TrainerModule(net)
 
-    # Configurar el logger de TensorBoard
     from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
-    # Configurar los callbacks para entrenar el modelo
     from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
     
-    version = len(os.listdir(exp_dir)) if os.path.exists(exp_dir) else 0
     logger = TensorBoardLogger(log_dir, name=name, version=version)
     csv_logger = CSVLogger(log_dir, name=name, version=version)
 
@@ -180,21 +118,14 @@ if __name__ == '__main__':
         mode='max'
     )
     
-    if show_versions:
-        # Mostrar las versiones disponibles para continuar el entrenamiento
-        print(f"Available versions for {name}:")
-        versions = [int(version.split('_')[-1]) for version in os.listdir(exp_dir)]
-        print(versions)
-        exit()
-
     trainer = pl.Trainer(
         logger=[logger, csv_logger],  # Usar el logger de TensorBoard y el logger de CSV
         log_every_n_steps=1,  # Guardar los logs cada paso
         callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
         deterministic=True,  # Hacer que el entrenamiento sea determinista
-        max_epochs=max_epochs,  # Número máximo de épocas
+        max_epochs=args['epochs'],  # Número máximo de épocas
         accelerator="gpu",
-        devices=[device],  # Dispositivo a usar
+        devices=[args['device']],
     )
 
     trainer.fit(model, dm, ckpt_path=ckpt)
