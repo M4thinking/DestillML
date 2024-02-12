@@ -63,7 +63,7 @@ class TrainerModule(pl.LightningModule):
         x, y = batch
         logits = self.model(x)
         loss = self.loss(logits, y)
-        self.log('val_loss', loss, on_epoch=True, on_step=True, prog_bar=True)
+        self.log('val/loss', loss, on_epoch=True, on_step=True, prog_bar=True)
         self.val_accuracy(logits, y)
 
     def on_validation_epoch_end(self, outputs = None):
@@ -82,7 +82,7 @@ class TrainerModule(pl.LightningModule):
     # Agregar learning rate a los logs
     def on_train_epoch_start(self):
         lr = self.optimizers().param_groups[0]['lr']
-        self.log('learning/rate', lr, on_epoch=True)
+        self.log('learning_rate', lr, on_epoch=True)
         
 if __name__ == '__main__':
     from utils import get_arguments
