@@ -52,12 +52,12 @@ class TrainerModule(pl.LightningModule):
         x, y = batch
         logits = self.model(x)
         loss = self.loss(logits, y)
-        self.log('train_loss', loss, on_epoch=True, on_step=True, prog_bar=True)
+        self.log('train/loss', loss, on_epoch=True, on_step=True, prog_bar=True)
         self.train_accuracy(logits, y)
         return loss
 
     def on_training_epoch_end(self, outputs = None):
-        self.log('train_accuracy', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('train/accuracy', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -67,28 +67,30 @@ class TrainerModule(pl.LightningModule):
         self.val_accuracy(logits, y)
 
     def on_validation_epoch_end(self, outputs = None):
-        self.log('val_accuracy', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('val/accuracy', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
         logits = self.model(x)
         loss = self.loss(logits, y)
-        self.log('test_loss', loss)
+        self.log('test/loss', loss)
         self.test_accuracy(logits, y)
 
     def on_test_epoch_end(self, outputs = None):
-        self.log('test_accuracy', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('test/accuracy', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
     
     # Agregar learning rate a los logs
     def on_train_epoch_start(self):
         lr = self.optimizers().param_groups[0]['lr']
-        self.log('learning_rate', lr, on_epoch=True)
+        self.log('learning/rate', lr, on_epoch=True)
         
 if __name__ == '__main__':
     from utils import get_arguments
 
     # Directorio de logs
     log_dir = "trainer_logs"
+    if not os.path.exists(log_dir):
+        os.makedirs(log_dir)
 
     args, name, exp_dir, ckpt, version, dm, net = get_arguments(log_dir, "trainer")
 
@@ -106,14 +108,14 @@ if __name__ == '__main__':
     # Configurar el ModelCheckpoint para guardar el mejor modelo
     checkpoint_callback = ModelCheckpoint(
         filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
-        monitor='val_accuracy',
+        monitor='val/accuracy',
         mode='max',
         save_top_k=1,
     )
 
     # Configurar el EarlyStopping para detener el entrenamiento si la pérdida de validaci 
     early_stopping_callback = EarlyStopping(
-        monitor='val_accuracy',
+        monitor='val/accuracy',
         patience=150,
         mode='max'
     )
