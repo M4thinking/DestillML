@@ -64,26 +64,40 @@ class KD(pl.LightningModule):
         self.log('learning_rate', lr, on_epoch=True)
 
     def training_step(self, batch, batch_idx):
-        return self._shared_step(batch, batch_idx, "train")
+        xs, ys = batch
+        preds, total_loss = self._shared_step(batch, batch_idx, "train")
+        self.train_acc(preds, ys)
+        return total_loss
+    
+    def on_train_epoch_end(self, outputs):
+        self.log('train/acc_epoch', self.train_acc.compute(), prog_bar=True, on_epoch=True)
     
     def validation_step(self, batch, batch_idx):
-        return self._shared_step(batch, batch_idx, "val")
+        preds, total_loss = self._shared_step(batch, batch_idx, "val")
+        self.val_acc(preds, batch[1])
+        return total_loss
+    
+    def on_validation_epoch_end(self):
+        self.log('val/acc_epoch', self.val_acc.compute(), prog_bar=True, on_epoch=True)
     
     def test_step(self, batch, batch_idx):
-        return self._shared_step(batch, batch_idx, "test")
+        preds, total_loss = self._shared_step(batch, batch_idx, "test")
+        self.test_acc(preds, batch[1])
+        return total_loss
+    
+    def on_test_epoch_end(self):
+        self.log('test/acc_epoch', self.test_acc.compute(), prog_bar=True, on_epoch=True)
         
     def _shared_step(self, batch, batch_idx, step):
         xs, ys = batch
         logits, losses = self.loss(xs, ys)
         preds = torch.argmax(logits, 1)
-        getattr(self, f"{step}_acc")(preds, ys)
         total_loss = sum(losses.values())
         
         for k, v in losses.items():
             self.log(f"{step}/{k}", v, on_epoch=True, on_step=True) # No prog_bar
         self.log(f"{step}/loss", total_loss, prog_bar=True, on_epoch=True, on_step=True)
-        self.log(f"{step}/acc", getattr(self, f"{step}_acc"), prog_bar=True, on_epoch=True)
-        return total_loss
+        return preds, total_loss
         
     def configure_optimizers(self):
         # Parámetros del optimizador
@@ -208,14 +222,14 @@ if __name__ == "__main__":
     # Configurar el ModelCheckpoint para guardar el mejor modelo
     checkpoint_callback = ModelCheckpoint(
         filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
-        monitor='val/acc',
+        monitor='val/acc_epoch',
         mode='max',
         save_top_k=1,
     )
 
     # Configurar el EarlyStopping para detener el entrenamiento si la pérdida de validaci 
     early_stopping_callback = EarlyStopping(
-        monitor='val/acc',
+        monitor='val/acc_epoch',
         patience=150,
         mode='max'
     )
