@@ -21,7 +21,7 @@ import wandb
 class KD(pl.LightningModule):
     def __init__(self, teacher: nn.Module, student: nn.Module, in_dims: int, lr: float = 1e-3, num_classes: int = 1000):
         super().__init__()
-        self.save_hyperparameters(ignore=['teacher', 'student'])
+        # self.save_hyperparameters(ignore=['teacher', 'student'])
         self.in_dims = in_dims
         
         self.teacher = teacher
@@ -178,54 +178,58 @@ if __name__ == "__main__":
     args, name, exp_dir, ckpt, version, dm, nets = get_arguments(log_dir, "distiller")
     
     # Cargar el modelo del profesor
-    teacher, student = nets
-    ckpt_path = os.path.join("checkpoints", name)
-    # Obtener el que termina en la versión especificada
-    teacher_version = args['teacher_version']
-    ckpt_path = os.path.join(ckpt_path, os.listdir(ckpt_path)[teacher_version])
-    teacher = teacher.load_from_checkpoint(ckpt_path, in_dims=(3, 224, 224))
+    # teacher, student = nets
+    teacher: nn.Module = nets[0]
+    student: nn.Module = nets[1]
     
-    # Crear el modelo de destilación
-    if ckpt is not None:
-        model = KD.load_from_checkpoint(ckpt, teacher=teacher, student=student, in_dims=(3, 224, 224))
-    else:
-        model = KD(teacher, student, in_dims=(3, 224, 224))
+    ckpt_path = os.path.join("checkpoints", f"{args.teacher_architecture}_{args.dataset}")
+    print(os.listdir(ckpt_path))
+    best_ckpt = os.path.join(ckpt_path, os.listdir(ckpt_path)[0])
     
-    # importar loggings
-    from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
-    from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+    # # Obtener el que termina en la versión especificada
+    # teacher = torch.onnx.load(best_ckpt)
     
-    logger = TensorBoardLogger(log_dir, name=name, version=version)
-    csv_logger = CSVLogger(log_dir, name=name, version=version)
+    # # Crear el modelo de destilación
+    # if ckpt is not None:
+    #     model = KD.load_from_checkpoint(ckpt, teacher=teacher, student=student, in_dims=(3, 224, 224))
+    # else:
+    #     model = KD(teacher, student, in_dims=(3, 224, 224))
     
-    # Configurar el ModelCheckpoint para guardar el mejor modelo
-    checkpoint_callback = ModelCheckpoint(
-        filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
-        monitor='val_loss',
-        mode='min',
-        save_top_k=1,
-    )
+    # # importar loggings
+    # from pytorch_lightning.loggers import TensorBoardLogger, CSVLogger
+    # from pytorch_lightning.callbacks import ModelCheckpoint, EarlyStopping
+    
+    # logger = TensorBoardLogger(log_dir, name=name, version=version)
+    # csv_logger = CSVLogger(log_dir, name=name, version=version)
+    
+    # # Configurar el ModelCheckpoint para guardar el mejor modelo
+    # checkpoint_callback = ModelCheckpoint(
+    #     filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
+    #     monitor='val_loss',
+    #     mode='min',
+    #     save_top_k=1,
+    # )
 
-    # Configurar el EarlyStopping para detener el entrenamiento si la pérdida de validaci 
-    early_stopping_callback = EarlyStopping(
-        monitor='val_loss',
-        patience=150,
-        mode='min'
-    )
+    # # Configurar el EarlyStopping para detener el entrenamiento si la pérdida de validaci 
+    # early_stopping_callback = EarlyStopping(
+    #     monitor='val_loss',
+    #     patience=150,
+    #     mode='min'
+    # )
     
-    trainer = pl.Trainer(
-        logger=[logger, csv_logger],  # Usar el logger de TensorBoard y el logger de CSV
-        log_every_n_steps=1,  # Guardar los logs cada paso
-        callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
-        deterministic=True,  # Hacer que el entrenamiento sea determinista
-        max_epochs=args['epochs'],  # Número máximo de épocas
-        accelerator="gpu",
-        devices=[args['device']],
-    )
+    # trainer = pl.Trainer(
+    #     logger=[logger, csv_logger],  # Usar el logger de TensorBoard y el logger de CSV
+    #     log_every_n_steps=1,  # Guardar los logs cada paso
+    #     callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
+    #     deterministic=True,  # Hacer que el entrenamiento sea determinista
+    #     max_epochs=args['epochs'],  # Número máximo de épocas
+    #     accelerator="gpu",
+    #     devices=[args['device']],
+    # )
     
-    # Entrenar el modelo
-    trainer = pl.Trainer(max_epochs=5)
-    trainer.fit(model)
+    # # Entrenar el modelo
+    # trainer = pl.Trainer(max_epochs=5)
+    # trainer.fit(model)
     
     # Evaluar el modelo
-    trainer.test(model)
+    # trainer.test(model)
