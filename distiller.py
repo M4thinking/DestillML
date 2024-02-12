@@ -69,7 +69,7 @@ class KD(pl.LightningModule):
         self.train_acc(preds, ys)
         return total_loss
     
-    def on_train_epoch_end(self, outputs):
+    def on_train_epoch_end(self):
         self.log('train/acc_epoch', self.train_acc.compute(), prog_bar=True, on_epoch=True)
     
     def validation_step(self, batch, batch_idx):
