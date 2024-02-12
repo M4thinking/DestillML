@@ -122,7 +122,7 @@ if __name__ == '__main__':
     
     trainer = pl.Trainer(
         logger=[logger, csv_logger],  # Usar el logger de TensorBoard y el logger de CSV
-        log_every_n_steps=1,  # Guardar los logs cada paso
+        log_every_n_steps=50,  # Guardar los logs cada paso
         callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
         deterministic=True,  # Hacer que el entrenamiento sea determinista
         max_epochs=args['epochs'],  # Número máximo de épocas
