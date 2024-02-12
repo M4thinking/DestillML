@@ -20,8 +20,9 @@ def get_arguments_trainer():
 def get_arguments_metrics():
     parser = get_common_arguments(description='Metrics arguments')
     parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152'], default='resnet101', help='Architecture to use')
-    # Modificar vesion a parametro obligatorio y quitar el anterior
-    parser._option_string_actions['--version'].required = True
+    # Hacer obligatoria la version si no se dice --show_versions
+    if '--show_versions' not in parser._option_string_actions:
+        parser._option_string_actions['--version'].required = True
     args = parser.parse_args()
     return {key: value for key, value in args.__dict__.items()}
 
