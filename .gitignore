@@ -163,6 +163,7 @@ cython_debug/
 data/*
 test_*.py
 *_loggs/
+checkpoints/
 
 # VSCode
 .vscode/
