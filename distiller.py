@@ -64,9 +64,8 @@ class KD(pl.LightningModule):
         self.log('learning_rate', lr, on_epoch=True)
 
     def training_step(self, batch, batch_idx):
-        xs, ys = batch
         preds, total_loss = self._shared_step(batch, batch_idx, "train")
-        self.train_acc(preds, ys)
+        self.train_acc(preds, batch[1])
         return total_loss
     
     def on_train_epoch_end(self):
