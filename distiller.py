@@ -18,7 +18,7 @@ import torchmetrics
 import pytorch_lightning as pl
 
 class KD(pl.LightningModule):
-    def __init__(self, teacher: nn.Module, student: nn.Module, in_dims: int, lr: float = 1e-3, num_classes: int = 1000, temperature: float = 3.0):
+    def __init__(self, teacher: nn.Module, student: nn.Module, in_dims: int, lr: float = 1e-3, num_classes: int = 1000, temperature: float = 16.0):
         super().__init__()
         self.save_hyperparameters(ignore=['teacher', 'student'])
         self.in_dims = in_dims
@@ -37,11 +37,8 @@ class KD(pl.LightningModule):
         # Teacher without dropout
         self.teacher.eval()
         
-        self.teacher_feature_size = teacher.features(torch.zeros(1, *in_dims)).shape[1]
-        self.student_feature_size = student.features(torch.zeros(1, *in_dims)).shape[1]
-        
-        print(f"Teacher feature size: {self.teacher_feature_size}")
-        print(f"Student feature size: {self.student_feature_size}")
+        self.teacher_feature_size = teacher.features(torch.zeros(1, *in_dims)).shape[1:]
+        self.student_feature_size = student.features(torch.zeros(1, *in_dims)).shape[1:]
         
         # Metrics
         self.train_acc = torchmetrics.Accuracy(task="multiclass", num_classes=num_classes)
@@ -52,7 +49,7 @@ class KD(pl.LightningModule):
         self.validation_step_outputs = []
         
         # Losses
-        # self.feature_matching_loss = FeatureMatchingLoss(self.student_feature_size, self.teacher_feature_size)
+        self.feature_matching_loss = FeatureMatchingLoss(self.student_feature_size, self.teacher_feature_size)
         
     def forward(self, x):
         ValueError("Not implemented, use self.teacher or self.student")
@@ -108,9 +105,9 @@ class KD(pl.LightningModule):
         # No poner weight_decay en las capas de BatchNormalization
         parameters = [
             {'params': [p for n, p in self.student.named_parameters() if 'bn' not in n], 'weight_decay': weight_decay},
-            {'params': [p for n, p in self.student.named_parameters() if 'bn' in n], 'weight_decay': 0}
-            # {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' not in n], 'weight_decay': weight_decay},
-            # {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' in n], 'weight_decay': 0}
+            {'params': [p for n, p in self.student.named_parameters() if 'bn' in n], 'weight_decay': 0},
+            {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' not in n], 'weight_decay': weight_decay},
+            {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' in n], 'weight_decay': 0}
         ]
         optimizer = optim.SGD(parameters, lr=lr, momentum=momentum)
         # optimizer = optim.SGD(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
@@ -139,31 +136,32 @@ class KD(pl.LightningModule):
                              F.softmax(teacher_logits / self.temperature, dim=1), reduction='batchmean') * self.temperature**2
 
         # # Feature Matching Loss
-        # feature_matching_loss = self.feature_matching_loss(self.teacher.features(xs), self.teacher.features(xs))
+        fm_loss = self.feature_matching_loss(self.teacher.features(xs), self.student.features(xs))
 
         losses ={
             "hard_loss": hard_loss,
             "soft_loss": soft_loss,
-            # "feature_matching_loss": feature_matching_loss
+            "fm_loss": fm_loss
         }
         return student_logits, losses
     
-class FeatureMatchingLoss(nn.Module):
-    def __init__(self, in_features, out_features, alpha=0.1):
+class FeatureMatchingLoss(torch.nn.Module):
+    def __init__(self, big_shape = (2048, 4, 4), small_shape = (512, 4, 4), alpha=1.0):
         super(FeatureMatchingLoss, self).__init__()
-        self.linear = nn.Linear(in_features, out_features, bias=False)
-        nn.init.xavier_uniform_(self.linear.weight)
+        # Mejor usar una convolución
+        self.att = torch.nn.Conv2d(big_shape[0], small_shape[0], kernel_size=big_shape[1]-small_shape[1]+1, stride=big_shape[1]-small_shape[1]+1)
+        nn.init.xavier_uniform_(self.att.weight)
+        nn.init.constant_(self.att.bias, 0.0)
+        self.loss = torch.nn.CosineEmbeddingLoss()
         self.alpha = alpha
-
-    def forward(self, student_features, teacher_features):
-        # Ajustar dimensiones si es necesario
-        if student_features.shape != teacher_features.shape:
-            student_features = self.linear(student_features)
-
-        # Calcular la loss de feature matching mediante norma L2
-        feature_matching_loss = F.mse_loss(student_features, teacher_features)
-
-        return feature_matching_loss * self.alpha
+        
+    def forward(self, y, x):
+        x = self.att(x)
+        x = x.view(x.size(0), -1)
+        y = y.view(y.size(0), -1)
+        x = F.normalize(x, p=2, dim=1)
+        y = F.normalize(y, p=2, dim=1)
+        return self.loss(x, y, torch.ones(x.size(0)).to(x.device)) * self.alpha
             
             
 if __name__ == "__main__":
@@ -189,15 +187,15 @@ if __name__ == "__main__":
             if len(ckpts) == 0:
                 raise ValueError(f"No checkpoint found in {ckpt_path}")
             elif len(ckpts) == 1:
-                best_ckpt = os.path.join(ckpt_path, ckpts[0])
+                teachr_ckpt = os.path.join(ckpt_path, ckpts[0])
             else:
                 print("Multiple checkpoints found, selecting the best one")
-                ckpts.sort( key=lambda x: int(x.split('=')[1].split('-')[0]))
+                ckpts.sort( key=lambda x: float(x.split('=')[1].split('_')[0]))
                 raise ValueError(f"Multiple checkpoints found for --teacher_version: {ckpts}")
         except Exception as err:
             raise err
     else:
-        ckpts.sort( key=lambda x: int(x.split('=')[1].split('-')[0]))
+        ckpts.sort( key=lambda x: float(x.split('=')[1].split('_')[0]))
         teachr_ckpt = os.path.join(ckpt_path, ckpts[args.teacher_version])
         print(f"Loading teacher checkpoint: {teachr_ckpt}")
 
@@ -220,7 +218,8 @@ if __name__ == "__main__":
     
     # Configurar el ModelCheckpoint para guardar el mejor modelo
     checkpoint_callback = ModelCheckpoint(
-        filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
+        filename='epoch={epoch:02d}-acc={val/acc_epoch:.2f}',  # Nombre del archivo
+        auto_insert_metric_name=False,
         monitor='val/acc_epoch',
         mode='max',
         save_top_k=1,
@@ -247,4 +246,10 @@ if __name__ == "__main__":
     trainer.fit(model, dm)
     
     # Evaluar el modelo
-    trainer.test(model, dm.test_dataloader())
+    metrics = trainer.test(model, dm.test_dataloader(), ckpt_path="best")
+    test_accuracy = metrics[0]['test/acc_epoch']*100
+    best_model = KD.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, teacher=teacher, student=student, in_dims=(3, 224, 224))
+    
+    if not os.path.exists(os.path.join("checkpoints", name)):
+        os.makedirs(os.path.join("checkpoints", name))
+    torch.save(best_model.student, os.path.join("checkpoints", name, f"acc={test_accuracy:.2f}_v{version}.pt"))
