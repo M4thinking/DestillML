@@ -18,11 +18,12 @@ import torchmetrics
 import pytorch_lightning as pl
 
 class KD(pl.LightningModule):
-    def __init__(self, teacher: nn.Module, student: nn.Module, in_dims: int, lr: float = 1e-3, num_classes: int = 1000, temperature: float = 16.0):
+    def __init__(self, teacher: nn.Module, student: nn.Module, in_dims: int, lr: float = 1e-3, num_classes: int = 1000, temperature: float = 16.0, feature_matching: bool = True):
         super().__init__()
         self.save_hyperparameters(ignore=['teacher', 'student'])
         self.in_dims = in_dims
         self.temperature = temperature
+        self.feature_matching = feature_matching
         
         self.teacher = teacher
         self.student = student
@@ -49,7 +50,7 @@ class KD(pl.LightningModule):
         self.validation_step_outputs = []
         
         # Losses
-        self.feature_matching_loss = FeatureMatchingLoss(self.student_feature_size, self.teacher_feature_size)
+        self.feature_matching_loss = FeatureMatchingLoss(self.student_feature_size, self.teacher_feature_size) if self.feature_matching else None
         
     def forward(self, x):
         ValueError("Not implemented, use self.teacher or self.student")
@@ -106,9 +107,15 @@ class KD(pl.LightningModule):
         parameters = [
             {'params': [p for n, p in self.student.named_parameters() if 'bn' not in n], 'weight_decay': weight_decay},
             {'params': [p for n, p in self.student.named_parameters() if 'bn' in n], 'weight_decay': 0},
-            {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' not in n], 'weight_decay': weight_decay},
-            {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' in n], 'weight_decay': 0}
         ]
+        
+        if self.feature_matching_loss is not None:
+            fm_params = [
+                {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' not in n], 'weight_decay': weight_decay},
+                {'params': [p for n, p in self.feature_matching_loss.named_parameters() if 'bn' in n], 'weight_decay': 0}
+            ]
+            parameters.extend(fm_params)
+            
         optimizer = optim.SGD(parameters, lr=lr, momentum=momentum)
         # optimizer = optim.SGD(self.parameters(), lr=lr, momentum=momentum, weight_decay=weight_decay)
         
@@ -135,14 +142,16 @@ class KD(pl.LightningModule):
         soft_loss = F.kl_div(F.log_softmax(student_logits / self.temperature, dim=1),
                              F.softmax(teacher_logits / self.temperature, dim=1), reduction='batchmean') * self.temperature**2
 
-        # # Feature Matching Loss
-        fm_loss = self.feature_matching_loss(self.teacher.features(xs), self.student.features(xs))
-
         losses ={
             "hard_loss": hard_loss,
             "soft_loss": soft_loss,
-            "fm_loss": fm_loss
         }
+
+        if self.feature_matching_loss is not None:
+            # Feature Matching Loss
+            fm_loss = self.feature_matching_loss(self.teacher.features(xs), self.student.features(xs))
+            losses["fm_loss"] = fm_loss
+
         return student_logits, losses
     
 class FeatureMatchingLoss(torch.nn.Module):
