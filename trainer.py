@@ -57,7 +57,7 @@ class TrainerModule(pl.LightningModule):
         return loss
 
     def on_training_epoch_end(self, outputs = None):
-        self.log('train/accuracy', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('train/accuracy', self.train_accuracy.compute()*100, prog_bar=True, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -67,7 +67,7 @@ class TrainerModule(pl.LightningModule):
         self.val_accuracy(logits, y)
 
     def on_validation_epoch_end(self, outputs = None):
-        self.log('val/accuracy', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('val/accuracy', self.val_accuracy.compute()*100, prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
@@ -77,7 +77,7 @@ class TrainerModule(pl.LightningModule):
         self.test_accuracy(logits, y)
 
     def on_test_epoch_end(self, outputs = None):
-        self.log('test/accuracy', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('test/accuracy', self.test_accuracy.compute()*100, prog_bar=True, on_epoch=True)
     
     # Agregar learning rate a los logs
     def on_train_epoch_start(self):
@@ -107,7 +107,8 @@ if __name__ == '__main__':
 
     # Configurar el ModelCheckpoint para guardar el mejor modelo
     checkpoint_callback = ModelCheckpoint(
-        filename='{epoch:02d}-{val_accuracy:.2f}',  # Nombre del archivo
+        filename='epoch={epoch:02d}-acc={val/accuracy:.2f}',  # Nombre del archivo
+        auto_insert_metric_name=False,
         monitor='val/accuracy',
         mode='max',
         save_top_k=1,
@@ -121,9 +122,9 @@ if __name__ == '__main__':
     )
     
     trainer = pl.Trainer(
-        logger=[logger, csv_logger],  # Usar el logger de TensorBoard y el logger de CSV
+        logger=[logger, csv_logger], # Usar el logger de TensorBoard y el logger de CSV
         log_every_n_steps=50,  # Guardar los logs cada paso
-        callbacks=[checkpoint_callback, early_stopping_callback],  # Callbacks
+        callbacks=[checkpoint_callback, early_stopping_callback], # Callbacks
         deterministic=True,  # Hacer que el entrenamiento sea determinista
         max_epochs=args['epochs'],  # Número máximo de épocas
         accelerator="gpu",
@@ -131,4 +132,12 @@ if __name__ == '__main__':
     )
 
     trainer.fit(model, dm, ckpt_path=ckpt)
-    trainer.test(model, dm.test_dataloader())
+    
+    # Evaluar el modelo
+    metrics = trainer.test(model, dm.test_dataloader(), ckpt_path="best")
+    test_accuracy = metrics[0]['test/accuracy']
+    best_model = TrainerModule.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, model=net)
+    
+    if not os.path.exists(os.path.join("checkpoints", name)):
+        os.makedirs(os.path.join("checkpoints", name))
+    torch.save(best_model.model, os.path.join("checkpoints", name, f"acc={test_accuracy:.2f}_v{version}.pt"))
