@@ -164,6 +164,11 @@ class CIFAR100DataModule(pl.LightningDataModule):
             transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
         ])
         
+        self.inv_normalize = transforms.Normalize(
+            mean=[-0.485/0.229, -0.456/0.224, -0.406/0.225],
+            std=[1/0.229, 1/0.224, 1/0.225]
+        )
+        
         # # # AutoAugment para el conjunto de entrenamiento y validación
         # self.autoaugment_transform = transforms.Compose([
         #     transforms.AutoAugment(policy=AutoAugmentPolicy.CIFAR10),
