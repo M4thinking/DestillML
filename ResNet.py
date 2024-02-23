@@ -102,13 +102,18 @@ class ResNet(nn.Module):
             layers.append(block(self.in_planes, planes, stride))
             self.in_planes = planes * block.expansion
         return nn.Sequential(*layers)
+    
+    def activation_hook(self, grad):
+        self.gradients = grad
 
-    def forward(self, x):
+    def forward(self, x, grad_cam=False):
         out = F.relu(self.bn1(self.conv1(x)))
         out = self.layer1(out)
         out = self.layer2(out)
         out = self.layer3(out)
         out = self.layer4(out)
+        if grad_cam:
+            x.register_hook(self.activation_hook)
         out = F.avg_pool2d(out, 4)
         out = out.view(out.size(0), -1)
         out = self.linear(out)
@@ -125,8 +130,7 @@ class ResNet(nn.Module):
         out = self.layer3(out)
         out = self.layer4(out)
         return out
-
-
+    
 def ResNet18(num_classes=10):
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
 
