@@ -57,7 +57,7 @@ class TrainerModule(pl.LightningModule):
         return loss
 
     def on_training_epoch_end(self, outputs = None):
-        self.log('train/accuracy', self.train_accuracy.compute()*100, prog_bar=True, on_epoch=True)
+        self.log('train/accuracy', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -67,7 +67,7 @@ class TrainerModule(pl.LightningModule):
         self.val_accuracy(logits, y)
 
     def on_validation_epoch_end(self, outputs = None):
-        self.log('val/accuracy', self.val_accuracy.compute()*100, prog_bar=True, on_epoch=True)
+        self.log('val/accuracy', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
@@ -77,7 +77,7 @@ class TrainerModule(pl.LightningModule):
         self.test_accuracy(logits, y)
 
     def on_test_epoch_end(self, outputs = None):
-        self.log('test/accuracy', self.test_accuracy.compute()*100, prog_bar=True, on_epoch=True)
+        self.log('test/accuracy', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
     
     # Agregar learning rate a los logs
     def on_train_epoch_start(self):
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     
     # Evaluar el modelo
     metrics = trainer.test(model, dm.test_dataloader(), ckpt_path="best")
-    test_accuracy = metrics[0]['test/accuracy']
+    test_accuracy = metrics[0]['test/accuracy']*100
     best_model = TrainerModule.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, model=net)
     
     if not os.path.exists(os.path.join("checkpoints", name)):
