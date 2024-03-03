@@ -22,14 +22,14 @@ def get_common_arguments(description='Common arguments'):
 
 def get_arguments_trainer():
     parser = get_common_arguments(description='Trainer arguments')
-    parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenet_v2'], default='resnet101', help='Architecture to use')
+    parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenetv2'], default='resnet101', help='Architecture to use')
     parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
     args = parser.parse_args()
     return DotDict(args.__dict__)
 
 def get_arguments_metrics():
     parser = get_common_arguments(description='Metrics arguments')
-    parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenet_v2'], default='resnet101', help='Architecture to use')
+    parser.add_argument('--architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenetv2'], default='resnet101', help='Architecture to use')
     # Hacer obligatoria la version si no se dice --show_versions
     if '--show_versions' not in parser._option_string_actions:
         parser._option_string_actions['--version'].required = True
@@ -39,9 +39,9 @@ def get_arguments_metrics():
 def get_arguments_distiller():
     parser = get_common_arguments(description='Distiller arguments')
     parser.add_argument('--epochs', type=int, default=600, help='Maximum number of epochs')
-    parser.add_argument('--teacher_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenet_v2'], default='resnet101', help='Teacher architecture to use')
+    parser.add_argument('--teacher_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenetv2'], default='resnet101', help='Teacher architecture to use')
     parser.add_argument('--teacher_version', type=int, default=None, help='Teacher version to load from')
-    parser.add_argument('--student_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenet_v2'], default='resnet18', help='Student architecture to use')
+    parser.add_argument('--student_architecture', type=str, choices=['resnet18', 'resnet34', 'resnet50', 'resnet101', 'resnet152', 'mobilenetv2'], default='resnet18', help='Student architecture to use')
     parser.add_argument('--distillation_temperature', type=float, default=3.0, help='Distillation temperature')
     parser.add_argument('--alpha', type=float, default=0.5, help='Distillation loss weight')
     args = parser.parse_args()
@@ -109,7 +109,7 @@ def get_architecture(architecture, num_classes):
         'resnet50': ResNet50,
         'resnet101': ResNet101,
         'resnet152': ResNet152,
-        'mobilenet_v2': mobilenet_v2
+        'mobilenetv2': mobilenet_v2
     }
     try:
         return architectures[architecture](num_classes=num_classes)
