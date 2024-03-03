@@ -131,21 +131,20 @@ class ResNet(nn.Module):
         out = self.layer4(out)
         return out
     
+def ResNet10(num_classes=10):
+    return ResNet(BasicBlock, [1, 1, 1, 1], num_classes=num_classes)
+    
 def ResNet18(num_classes=10):
     return ResNet(BasicBlock, [2, 2, 2, 2], num_classes=num_classes)
-
 
 def ResNet34(num_classes=10):
     return ResNet(BasicBlock, [3, 4, 6, 3], num_classes=num_classes)
 
-
 def ResNet50(num_classes=10):
     return ResNet(Bottleneck, [3, 4, 6, 3], num_classes=num_classes)
 
-
 def ResNet101(num_classes=10):
     return ResNet(Bottleneck, [3, 4, 23, 3], num_classes=num_classes)
-
 
 def ResNet152():
     return ResNet(Bottleneck, [3, 8, 36, 3])
@@ -154,19 +153,19 @@ def ResNet152():
 def test():
     net = ResNet18()
     y = net(torch.randn(1, 3, 32, 32))
-    print(y.size())
+    print(y.size(), sum(p.numel() for p in net.parameters())/float(1e6))
     net = ResNet34()
     y = net(torch.randn(1, 3, 32, 32))
-    print(y.size())
+    print(y.size(), sum(p.numel() for p in net.parameters())/float(1e6))
     net = ResNet50()
     y = net(torch.randn(1, 3, 32, 32))
-    print(y.size())
+    print(y.size(), sum(p.numel() for p in net.parameters())/float(1e6))
     net = ResNet101()
     y = net(torch.randn(1, 3, 32, 32))
-    print(y.size())
+    print(y.size(), sum(p.numel() for p in net.parameters())/float(1e6))
     net = ResNet152()
     y = net(torch.randn(1, 3, 32, 32))
-    print(y.size())
+    print(y.size(), sum(p.numel() for p in net.parameters())/float(1e6))
     
 if __name__ == "__main__":
     test()
