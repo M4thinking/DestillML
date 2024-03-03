@@ -57,7 +57,7 @@ class TrainerModule(pl.LightningModule):
         return loss
 
     def on_training_epoch_end(self, outputs = None):
-        self.log('train/accuracy', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('train/acc_epoch', self.train_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def validation_step(self, batch, batch_idx):
         x, y = batch
@@ -67,7 +67,7 @@ class TrainerModule(pl.LightningModule):
         self.val_accuracy(logits, y)
 
     def on_validation_epoch_end(self, outputs = None):
-        self.log('val/accuracy', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('val/acc_epoch', self.val_accuracy.compute(), prog_bar=True, on_epoch=True)
 
     def test_step(self, batch, batch_idx):
         x, y = batch
@@ -77,7 +77,7 @@ class TrainerModule(pl.LightningModule):
         self.test_accuracy(logits, y)
 
     def on_test_epoch_end(self, outputs = None):
-        self.log('test/accuracy', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
+        self.log('test/acc_epoch', self.test_accuracy.compute(), prog_bar=True, on_epoch=True)
     
     # Agregar learning rate a los logs
     def on_train_epoch_start(self):
@@ -107,16 +107,16 @@ if __name__ == '__main__':
 
     # Configurar el ModelCheckpoint para guardar el mejor modelo
     checkpoint_callback = ModelCheckpoint(
-        filename='epoch={epoch:02d}-acc={val/accuracy:.2f}',  # Nombre del archivo
+        filename='epoch={epoch:02d}-acc={val/acc_epoch:.2f}',  # Nombre del archivo
         auto_insert_metric_name=False,
-        monitor='val/accuracy',
+        monitor='val/acc_epoch',
         mode='max',
         save_top_k=1,
     )
 
     # Configurar el EarlyStopping para detener el entrenamiento si la pérdida de validaci 
     early_stopping_callback = EarlyStopping(
-        monitor='val/accuracy',
+        monitor='val/acc_epoch',
         patience=150,
         mode='max'
     )
@@ -135,7 +135,7 @@ if __name__ == '__main__':
     
     # Evaluar el modelo
     metrics = trainer.test(model, dm.test_dataloader(), ckpt_path="best")
-    test_accuracy = metrics[0]['test/accuracy']*100
+    test_accuracy = metrics[0]['test/acc_epoch']*100
     best_model = TrainerModule.load_from_checkpoint(trainer.checkpoint_callback.best_model_path, model=net)
     
     if not os.path.exists(os.path.join("checkpoints", name)):
