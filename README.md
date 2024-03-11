@@ -11,7 +11,7 @@
     - Similarity preserving: Consiste en entrenar la red aprendiz con las salidas de la red tutora (logits) y las salidas de la red aprendiz, para que sean similares.
     - Attention transfer: Consiste en entrenar la red aprendiz con las salidas de las capas intermedias de la red tutora, para que la red aprendiz preste atención a las mismas características que la red tutora.
 6. En caso de resultados prometedores, se utilizará la técnica de mejor desempeño en un escenario de escasez de recursos, es decir, la red aprendiz con menos parametros y el dataset mas pequeño.
-7. Se compararán los resultados de las redes tutoras y aprendices con las métricas de accuracy y tiempo de entrenamiento además de técnias de XAI para entender el comportamiento de las redes como Grad-CAM, LIME y SHAP.
+7. Se compararán los resultados de las redes tutoras y aprendices con las métricas de accuracy y tiempo de entrenamiento además de técnias de XAI para entender el comportamiento de las redes como Grad-CAM y SHAP.
 
 ```plaintext
 Debido a la cantidad de parámetros, se debieron considerar estos cambios debido a la capacidad computacional y la aplicabilidad del dataset al entrenar las diferentes arquitecturas de VGG.
