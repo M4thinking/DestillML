@@ -1,4 +1,4 @@
-# Proyecto Final - Knowledge Distillation y tectécnicas de XAI para el aprendizaje
+# Proyecto Final - Knowledge Distillation y técnicas de XAI para el aprendizaje
 
 ## Knowledge destillation sobre imaganes naturales
 
