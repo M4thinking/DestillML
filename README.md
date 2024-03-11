@@ -4,7 +4,7 @@
 
 1. En principio se utilizo la red tutora VGG19, la red aprendiz era VGG19 con la mitad con la mitad de filtros convolucionales, sobre el 3% del dataset de ImageNet (1.4 millones de imagenes y 1000 clases).
 2. Surge el problema del gran cuello de botella de parametros en ambas redes, la gran necesidad de memoria y tiempo de entrenamiento por el tamaño de las redes y el tamaño del dataset a pesar de ser una fraccion.
-3. Se propone la utilizacion de redes que distribuyan mejor los parametros, como la familia de modelos ResNet y el dataset en principio completo de CIFAR-10 (60 mil imagenes y 100 clases).
+3. Se propone la utilizacion de redes que distribuyan mejor los parametros, como la familia de modelos ResNet y el dataset en principio completo de CIFAR-100 (60 mil imagenes y 100 clases).
 4. Para poder comparar resultados y hacer consistente la comparacion se aplicará el mismo esquema de entrenamiento para la red tutora y la red aprendiz, y se estudiarán técnicas para mejorar este baseline mediante knowledge destillation.
 5. Se aplican principalmente 3 técnicas de destilación de conocimiento.
     - Soft targets: Consiste en entrenar la red aprendiz con las salidas de la red tutora (logits), en lugar de las etiquetas originales.
